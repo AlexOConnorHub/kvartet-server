@@ -26,5 +26,5 @@ def handle_websocket():
     
 if __name__ == '__main__':
     server = gevent.pywsgi.WSGIServer(
-        ("localhost", 8080), app, handler_class=geventwebsocket.handler.WebSocketHandler)
+        ("localhost", 4444), app, handler_class=geventwebsocket.handler.WebSocketHandler)
     server.serve_forever()
