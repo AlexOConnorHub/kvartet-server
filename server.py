@@ -1,4 +1,5 @@
-<<<<<<< HEAD
+#!/usr/bin/env python
+
 import asyncio
 import gevent.pywsgi
 import geventwebsocket.handler
@@ -27,19 +28,3 @@ if __name__ == '__main__':
     server = gevent.pywsgi.WSGIServer(
         ("localhost", 8080), app, handler_class=geventwebsocket.handler.WebSocketHandler)
     server.serve_forever()
-=======
-#!/usr/bin/env python
-
-import asyncio
-from websockets import serve
-
-async def echo(websocket, path):
-    async for message in websocket:
-        await websocket.send(message)
-
-async def main():
-    async with serve(echo, "localhost", 8765):
-        await asyncio.Future()  # run forever
-
-asyncio.run(main())
->>>>>>> master
