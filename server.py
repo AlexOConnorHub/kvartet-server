@@ -1,48 +1,28 @@
-import threading
-import flask
-import flask_sockets
-import random
-import _thread
+import asyncio
+import gevent.pywsgi
+import geventwebsocket.handler
+import geventwebsocket
+import bottle
 
+app = bottle.Bottle()
 
-class kvarteto:
-    def __init__(self):
-        self.num_of_players = 0
-        self.started_game = False
-        self.player_turn = 0
+async def socket_task(ws):
+    counter = 0
+    while True:
+        message = ws.receive() # BLOCKING CALL
+        if message is not None:
+            if ( message == "Test" ):
+                counter += 1
+            ws.send(str(counter))
 
-    def add_player(self):
-        if (not self.started_game):
-            self.num_of_players += 1
-            return True
-        return False
-
-    def start_game(self):
-        if (not self.started_game):
-            self.started_game = True
-            self.player_turn = random.randrange(1, (self.num_of_players + 1))
-            return True
-        return False
-
-
-app = flask.Flask(__name__)
-sockets = flask_sockets.Sockets(app)
-kavarteto_game = kvarteto()
-
-
-def socket_thread():
-    pass
-
-
-@sockets.route('/kvarteto')
-def echo_socket(ws):
-    kavarteto_game.add_player()
-    while not ws.closed:
-        start_new_thread(socket_thread, (c,))
-        message = ws.receive()
-        print(message)
-        ws.send(message)
-
-
+@app.route('/websocket')
+def handle_websocket():
+    wsock = bottle.request.environ.get('wsgi.websocket')
+    if not wsock:
+        bottle.abort(400, 'Expected WebSocket request.')
+    asyncio.run(socket_task(wsock))
+    
 if __name__ == '__main__':
-    app.run(use_debugger=False, use_reloader=False, passthrough_errors=True)
+    server = gevent.pywsgi.WSGIServer(
+        ("localhost", 8080), app, handler_class=geventwebsocket.handler.WebSocketHandler)
+    server.serve_forever()
