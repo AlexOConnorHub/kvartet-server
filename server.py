@@ -7,6 +7,7 @@ import geventwebsocket.handler
 import geventwebsocket
 import bottle
 import enum
+import json
 
 app = bottle.Bottle()
 
@@ -19,15 +20,25 @@ class state(enum.Enum):
     PLAYING = 5
     END_OF_GAME = 6
 
-async def socket_task(ws):
+player_states = {}
+num_of_players = 0
+playing_game = False
+
+async def socket_task(ws, p_id):
+    global num_of_players, player_states, playing_game
     counter = 0
     state_of_game = state.DISCONNECTED
+    is_json = False
     while True:
         message = ws.receive() # BLOCKING CALL
-        if message is not "PING":
-            if ( message == "INCIMENT" ):
-                counter += 1
-            elif ( message == "CONNECTED" ):
+        if (message != "PING" and message != None):
+            if (message[0] == "1"):
+                json.loads(message[1:])
+                is_json = True
+            else:
+                is_json = False
+
+            if ( message == "CONNECTED" ):
                 state_of_game = state.CONNECTED
             elif ( message == "START" ):
                 state_of_game = state.READY_TO_START_GAME
@@ -39,15 +50,20 @@ async def socket_task(ws):
                 state_of_game = state.PLAYING
             elif ( message == "END_OF_GAME" ):
                 state_of_game = state.END_OF_GAME
+            elif ( message == "INCIMENT" ):
+                counter += 1
 
             ws.send(str(state_of_game) + " " + str(counter))
 
 @app.route('/websocket')
 def handle_websocket():
+    global num_of_players, player_states
     wsock = bottle.request.environ.get('wsgi.websocket')
     if not wsock:
         bottle.abort(400, 'Expected WebSocket request.')
-    asyncio.run(socket_task(wsock))
+    player_states[num_of_players] = []
+    num_of_players += 1
+    asyncio.run(socket_task(wsock, num_of_players-1))
     
 if __name__ == '__main__':
     server = gevent.pywsgi.WSGIServer(
