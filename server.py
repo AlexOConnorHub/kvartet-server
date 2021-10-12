@@ -20,6 +20,9 @@ class state(enum.Enum):
     PLAYING = 5
     END_OF_GAME = 6
 
+def game_update():
+    pass
+
 player_states = {}
 num_of_players = 0
 playing_game = False
@@ -27,33 +30,38 @@ playing_game = False
 async def socket_task(ws, p_id):
     global num_of_players, player_states, playing_game
     counter = 0
-    state_of_game = state.DISCONNECTED
-    is_json = False
+    player_states[p_id]["state_of_game"] = state.CONNECTED
     while True:
         message = ws.receive() # BLOCKING CALL
         if (message != "PING" and message != None):
-            if (message[0] == "1"):
-                json.loads(message[1:])
-                is_json = True
-            else:
-                is_json = False
-
-            if ( message == "CONNECTED" ):
-                state_of_game = state.CONNECTED
-            elif ( message == "START" ):
-                state_of_game = state.READY_TO_START_GAME
-            elif ( message == "IN_GAME" ):
-                state_of_game = state.PLAYING_GAME
-            elif ( message == "OTHER_PLAYER" ):
-                state_of_game = state.WAITING_FOR_OTHERS
-            elif ( message == "PLAYING" ):
-                state_of_game = state.PLAYING
-            elif ( message == "END_OF_GAME" ):
-                state_of_game = state.END_OF_GAME
-            elif ( message == "INCIMENT" ):
+            final = {
+                'change_of_state':  False,
+                'ack':              False,
+                'state':            player_states[p_id]["state_of_game"]
+            }
+            message_json = json.loads(message[1:])
+            if ( player_states[p_id]["state_of_game"] == state.CONNECTED ):
+                if ( message_json["am_ready"] == True ):
+                    player_states[p_id]["state_of_game"] = state.READY_TO_START_GAME
+                    final['ack'] = True
+            elif ( player_states[p_id]["state_of_game"] == state.READY_TO_START_GAME ):
+                if ( playing_game == True):
+                    player_states[p_id]["state_of_game"] = state.PLAYING_GAME
+                    final['change_of_state'] = True
+            elif ( player_states[p_id]["state_of_game"] == state.PLAYING_GAME ):
+                player_states[p_id]["state_of_game"] = state.PLAYING_GAME
+            elif ( player_states[p_id]["state_of_game"] == state.WAITING_FOR_OTHERS ):
+                player_states[p_id]["state_of_game"] = state.WAITING_FOR_OTHERS
+            elif ( player_states[p_id]["state_of_game"] == state.PLAYING ):
+                player_states[p_id]["state_of_game"] = state.PLAYING
+            elif ( player_states[p_id]["state_of_game"] == "END_OF_GAME" ):
+                player_states[p_id]["state_of_game"] = state.END_OF_GAME
+            elif ( message_json == "INCIMENT" ):
                 counter += 1
 
-            ws.send(str(state_of_game) + " " + str(counter))
+            final['state'] = player_states[p_id]["state_of_game"]
+            ws.send(str(player_states[p_id]["state_of_game"]) + " " + str(counter))
+            game_update()
 
 @app.route('/websocket')
 def handle_websocket():
