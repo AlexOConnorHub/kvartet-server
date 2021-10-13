@@ -67,7 +67,6 @@ async def socket_task(ws, p_id):
               continue
 
             final = {
-                'ack':              [None, False],
                 'change_of_state':  False,
                 'hand':             False,
                 'other_hands':      False,
@@ -79,36 +78,33 @@ async def socket_task(ws, p_id):
                 if ( message_json.get('am_ready') == True ):
                     message_json.pop('am_ready')
                     player_states[p_id]['state_of_game'] = state.READY_TO_START_GAME
+                    final['state'] = player_states[p_id]['state_of_game']
                     final['change_of_state'] =  True
-                    final['ack'] = ['am_ready', True]
 
-            elif ( player_states[p_id]['state_of_game'] == state.READY_TO_START_GAME ):
-                if ( game_states['in_game'] == False):
+            if ( player_states[p_id]['state_of_game'] == state.READY_TO_START_GAME ):
+                if ( game_states['in_game'] == True):
                     player_states[p_id]['state_of_game'] = state.PLAYING_GAME
+                    final['state'] = player_states[p_id]['state_of_game']
                     final['change_of_state'] = True
                 elif ( message_json.get('am_ready') == False ):
                     message_json.pop('am_ready')
                     player_states[p_id]['state_of_game'] = state.CONNECTED
+                    final['state'] = player_states[p_id]['state_of_game']
                     final['change_of_state'] =  True
-                    final['ack'] = ['am_ready', True]
 
-
-            elif ( player_states[p_id]['state_of_game'] == state.PLAYING_GAME ):
-                player_states[p_id]['state_of_game'] = state.PLAYING_GAME
-
-            elif ( player_states[p_id]['state_of_game'] == state.WAITING_FOR_OTHERS ):
-                player_states[p_id]['state_of_game'] = state.WAITING_FOR_OTHERS
-            
-            elif ( player_states[p_id]['state_of_game'] == state.PLAYING ):
-                player_states[p_id]['state_of_game'] = state.PLAYING
-            
-            elif ( player_states[p_id]['state_of_game'] == state.PLAYING ):
-                player_states[p_id]['state_of_game'] = state.END_OF_GAME
-            
-            elif ( message_json == "INCIMENT" ):
+            if ( player_states[p_id]['state_of_game'] == state.PLAYING_GAME ):
+                if (game_states['in_game'] == False):
+                    player_states[p_id]['state_of_game'] = state.CONNECTED
+                    final['state'] = player_states[p_id]['state_of_game']
+                    ##### TODO ENDGAME Code here
+                elif (game_states['player'] == p_id):
+                    final['state'] = state.PLAYING
+                elif (game_states['player'] != p_id):
+                    final['state'] = state.WAITING_FOR_OTHERS
+                        
+            if ( message_json == "INCIMENT" ):
                 counter += 1
 
-            final['state'] = player_states[p_id]['state_of_game']
             ws.send(str(player_states[p_id]['state_of_game']) + ' ' + str(counter))
             game_update()
 
