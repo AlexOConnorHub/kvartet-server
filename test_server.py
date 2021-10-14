@@ -41,7 +41,7 @@ class TestNoPublicVariables(unittest.TestCase):
         backTogether.sort()
         sortedDeck = FULL_DECK
         sortedDeck.sort()
-        self.assertAlmostEqual(backTogether, sortedDeck)
+        self.assertEqual(backTogether, sortedDeck)
 
     def test_has_card(self):
         self.assertTrue(isinstance( has_card([], ""), list))
@@ -89,17 +89,46 @@ class TestPublicVariables(unittest.TestCase):
         self.assertEqual(game_states['deck'], [])
         self.assertFalse(go_fish(2))
         
-    # Reads game_states['num_of_players'] and player_states['state_of_game']
-    def test_ready_to_play():
-        global game_states, player_states
+    def test_ready_to_play(self):
+        global game_states
         game_states['num_of_players'] = 3
-        player_states['state_of_game'] = []
-    
+        game_states['players_ready'] = {}
+        self.assertTrue(isinstance(ready_to_play(), bool))
+        self.assertFalse(ready_to_play())
+        game_states['players_ready'][0] = state.READY_TO_START_GAME
+        game_states['players_ready'][1] = state.CONNECTED
+        self.assertFalse(ready_to_play())
+        game_states['players_ready'][2] = state.READY_TO_START_GAME
+        self.assertFalse(ready_to_play())
+        game_states['players_ready'][1] = state.READY_TO_START_GAME
+        self.assertTrue(ready_to_play())
+
     # Calls ready_to_play()
     # Reads game_states['in_game']
     # Writes game_states['deck', 'hands', 'in_game']
-    def test_start_game():
-        pass
+    def test_start_game(self):
+        global game_states
+        game_states['in_game'] = False
+        game_states['num_of_players'] = 3
+        game_states['players_ready'] = {
+            0: state.READY_TO_START_GAME, 
+            1: state.READY_TO_START_GAME
+        }
+        self.assertTrue(isinstance(start_game(), bool))
+        self.assertFalse(start_game())
+        game_states['players_ready'][2] = state.READY_TO_START_GAME
+        self.assertTrue(ready_to_play())
+        self.assertTrue(start_game())
+        self.assertTrue(game_states['in_game'])
+        self.assertEqual(len(game_states['deck']), 31)
+        self.assertEqual(len(game_states['hands']), 3)
+        self.assertEqual(len(game_states['hands'][0]), 7)
+        backTogether = (game_states['deck']) + (game_states['hands'][0]) + (game_states['hands'][1]) + (game_states['hands'][2])
+        backTogether.sort()
+        sortedDeck = FULL_DECK
+        sortedDeck.sort()
+        self.assertEqual(backTogether, sortedDeck)
+
     
     # Reads game_states['hands']
     # Writes game_states['hands', 'matches']
@@ -109,7 +138,7 @@ class TestPublicVariables(unittest.TestCase):
     # Reads game_states['player', 'hands']
     # Writes game_states['hands']
     # Calls go_fish() matches()
-    def test_lay_card(p_id, card_played, p_to_ask):
+    def test_play_card(p_id, card_played, p_to_ask):
         pass
     
 

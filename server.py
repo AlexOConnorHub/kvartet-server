@@ -38,8 +38,8 @@ class state(enum.Enum):
     PLAYING = 5
     END_OF_GAME = 6
 app = bottle.Bottle()
-player_states = {}
 game_states = {
+    'players_ready': {},
     'deck': None,
     'hands': None,
     'in_game': False,
@@ -69,13 +69,13 @@ def go_fish(p_id):
     game_states['deck'].pop(new_card_i)
     return True
 
-# Reads game_states['num_of_players'] and player_states['state_of_game']
+# Reads game_states['num_of_players', 'players_ready']
 def ready_to_play():
-    global game_states, player_states
+    global game_states
     for player in range(game_states['num_of_players']):
-        if (player_states[player]['state_of_game'] != state.READY_TO_START_GAME):
+        if (game_states['players_ready'].get(player) != state.READY_TO_START_GAME):
             return False
-    return True
+    return True if (game_states['num_of_players'] > 0) else False
 
 # Calls ready_to_play()
 # Reads game_states['in_game']
@@ -84,11 +84,12 @@ def start_game():
     global game_states
     if((ready_to_play()) and (not game_states['in_game'])):
         game_states['in_game'] = True
-        dealt = deal()
+        dealt = deal(game_states['num_of_players'])
         game_states['deck'] = dealt[0]
         game_states['hands'] = dealt[1]
         game_states['matches'] = []
-
+        return True
+    return False
 # Reads game_states['hands']
 # Writes game_states['hands', 'matches']
 def matches(p_id, card_played):
@@ -122,9 +123,9 @@ def play_card(p_id, card_played, p_to_ask):
     matches(p_id, card_played)
 
 async def socket_task(ws, p_id):
-    global game_states, player_states
+    global game_states
     counter = 0
-    player_states[p_id]['state_of_game'] = state.CONNECTED
+    game_states['players_ready'][p_id] = state.CONNECTED
     while True:
         message = ws.receive() # BLOCKING CALL
         if (message != 'PING' and message != None):
@@ -138,29 +139,29 @@ async def socket_task(ws, p_id):
                 'hand':             None,
                 'other_hands':      None,
                 'matches':          None,
-                'state':            player_states[p_id]['state_of_game'],
+                'state':            game_states['players_ready'].get(p_id),
             }
             
-            if ( player_states[p_id]['state_of_game'] == state.CONNECTED ):
+            if ( game_states['players_ready'].get(p_id) == state.CONNECTED ):
                 if ( message_json.get('am_ready') == True ):
                     message_json.pop('am_ready')
-                    player_states[p_id]['state_of_game'] = state.READY_TO_START_GAME
-                    final['state'] = player_states[p_id]['state_of_game']
+                    game_states['players_ready'][p_id] = state.READY_TO_START_GAME
+                    final['state'] = game_states['players_ready'].get(p_id)
 
-            if ( player_states[p_id]['state_of_game'] == state.READY_TO_START_GAME ):
+            if ( game_states['players_ready'].get(p_id) == state.READY_TO_START_GAME ):
                 if ( message_json.get('am_ready') == False ):
                     message_json.pop('am_ready')
-                    player_states[p_id]['state_of_game'] = state.CONNECTED
-                    final['state'] = player_states[p_id]['state_of_game']
+                    game_states['players_ready'][p_id] = state.CONNECTED
+                    final['state'] = game_states['players_ready'].get(p_id)
                 start_game()
                 if ( game_states['in_game'] == True):
-                    player_states[p_id]['state_of_game'] = state.PLAYING_GAME
-                    final['state'] = player_states[p_id]['state_of_game']
+                    game_states['players_ready'][p_id] = state.PLAYING_GAME
+                    final['state'] = game_states['players_ready'].get(p_id)
                 
-            if ( player_states[p_id]['state_of_game'] == state.PLAYING_GAME ):
+            if ( game_states['players_ready'].get(p_id) == state.PLAYING_GAME ):
                 if (game_states['in_game'] == False):
-                    player_states[p_id]['state_of_game'] = state.CONNECTED
-                    final['state'] = player_states[p_id]['state_of_game']
+                    game_states['players_ready'][p_id] = state.CONNECTED
+                    final['state'] = game_states['players_ready'].get(p_id)
                     ##### TODO ENDGAME Code here
 
                 elif (game_states['player'] == p_id):
@@ -181,15 +182,13 @@ async def socket_task(ws, p_id):
             if ( message_json == "INCIMENT" ):
                 counter += 1
 
-            ws.send(str(player_states[p_id]['state_of_game']) + ' ' + str(counter))
+            ws.send(str(game_states['players_ready'].get(p_id)) + ' ' + str(counter))
 
 @app.route("/websocket")
 def handle_websocket():
-    global player_states
     wsock = bottle.request.environ.get("wsgi.websocket")
     if not wsock:
         bottle.abort(400, "Expected WebSocket request.")
-    player_states[game_states['num_of_players']] = {}
     game_states['num_of_players'] += 1
     asyncio.run(socket_task(wsock, game_states['num_of_players']-1))
     
