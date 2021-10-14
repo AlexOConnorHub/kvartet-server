@@ -29,13 +29,6 @@ def has_card(hand: list, card_played: int):
             last_find = hand.index(card, last_find) + 1
     return final
 
-def find_all_index(cards, card_played):
-    final = []
-    for i in range(len(cards)):
-        if (card_played in cards[i]):
-            final.append(i)
-    return final
-
 class state(enum.Enum):
     DISCONNECTED = 0
     CONNECTED = 1
@@ -65,6 +58,17 @@ def get_other_hands(p_id):
         final.append([i, len(game_states['hands'][i])])
     return final
 
+# Reads game_states['deck']
+# Writes game_states['deck', 'hands']
+def go_fish(p_id):
+    global game_states
+    if (len(game_states['deck']) == 0):
+        return False
+    new_card_i = random.randint(0, len(game_states['deck']) - 1)
+    game_states['hands'][p_id].append(game_states['deck'][new_card_i])
+    game_states['deck'].pop(new_card_i)
+    return True
+
 # Reads game_states['num_of_players'] and player_states['state_of_game']
 def ready_to_play():
     global game_states, player_states
@@ -79,48 +83,43 @@ def ready_to_play():
 def start_game():
     global game_states
     if((ready_to_play()) and (not game_states['in_game'])):
+        game_states['in_game'] = True
         dealt = deal()
         game_states['deck'] = dealt[0]
         game_states['hands'] = dealt[1]
-        game_states['in_game'] = True
+        game_states['matches'] = []
 
-# Read game_states['hands']
-# Writes game_state['matches', 'hands']
-# REWRITE WITH FUCTION CALLS
-def matching(p_id):
-    cards = []
-    for i in range(len(game_states['hands'][p_id])):
-        cards.append(game_states['hands'][p_id][i].split(' ').append(i))
-    card_count = {}
-    for card in cards:
-        if (card[0] in card_count):
-            card_count[card[0]][0] += 1
-            card_count[card[0]][1].append(card[2])
-        else:
-            card_count[card[0]] = [1, [card[2]]]
-    matches = []
-    for card in card_count:
-        if (card_count[card][0] == 4):
-            matches.append(card)
-    if (len(matches)):
-        for match in matches:
-            game_states['matches'].append([p_id, game_states['hands'][p_id][match[0]].split(' ')[0]])
-            for i in match[1]:
-                game_states['hands'][p_id].pop(i)
+# Reads game_states['hands']
+# Writes game_states['hands', 'matches']
+def matches(p_id, card_played):
+    global game_states
+    index_in_hand = has_card(game_states['hands'][p_id], card_played)
+    if (index_in_hand == 4):
+        game_states['matches'].append([p_id, card_played.split(' ')[0]])
+        for i in index_in_hand:
+            game_states['hands'][p_id].pop(i)
 
 # Reads game_states['player', 'hands']
+# Writes game_states['hands']
+# Calls go_fish() matches()
 def play_card(p_id, card_played, p_to_ask):
     global game_states
     if (game_states['player'] != p_id):
         return False
-    if (has_card(game_states['hands'][p_id], card_played)):
+
+    index_in_hand = has_card(game_states['hands'][p_id], card_played)
+    if (len(index_in_hand) == 0):
         return False
-    if (has_card(game_states['hands'][p_to_ask], card_played)):
-        index_of_all = find_all_index(game_states['hands'][p_to_ask], card_played)
-        for i in index_of_all:
-            game_states['hands'][p_id].append(game_states['hands'][p_to_ask][i])
-            game_states['hands'][p_to_ask].pop(game_states['hands'][p_to_ask][i])
-        matching(p_id)
+    
+    index_of_all = has_card(game_states['hands'][p_to_ask], card_played)
+    if (len(index_of_all) == 0):
+        go_fish(p_id) # ENDGAME LOGIC
+
+    for i in index_of_all:
+        game_states['hands'][p_id].append(game_states['hands'][p_to_ask][i])
+        game_states['hands'][p_to_ask].pop(i)
+
+    matches(p_id, card_played)
 
 async def socket_task(ws, p_id):
     global game_states, player_states
