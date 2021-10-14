@@ -1,9 +1,41 @@
 #!/usr/bin/env python
-from http.client import parse_headers
-from typing import Match
 import gevent.pywsgi, geventwebsocket.handler
 import asyncio, bottle, enum
 import geventwebsocket, json, random
+
+def reset_deck():
+    deck = []
+    for card in ["rank-2", "rank-3", "rank-4", "rank-5", "rank-6", "rank-7", "rank-8", "rank-9", "rank-10", "rank-j", "rank-q", "rank-k", "rank-a"]:
+        for suit in ["diams", "spades", "clubs", "hearts"]:
+            deck.append(card + ' ' + suit)
+    return deck
+
+def deal(num_of_players):
+    deck = reset_deck()
+    hands = [[] for x in range(num_of_players)]
+    i = 0
+    for _ in range((num_of_players * 7)):
+        hands[i].append(random.choice(deck))
+        deck.pop(deck.index(hands[i][-1]))
+        i = (i + 1) % num_of_players
+    return [deck, hands]
+
+def has_card(hand: list, card_played: int):
+    final = []
+    last_find = 0
+    for card in hand:
+        if (card.split(' ')[0] == card_played):
+            final.append(hand.index(card, last_find))
+            last_find = hand.index(card, last_find) + 1
+    return final
+
+def find_all_index(cards, card_played):
+    final = []
+    for i in range(len(cards)):
+        if (card_played in cards[i]):
+            final.append(i)
+    return final
+
 class state(enum.Enum):
     DISCONNECTED = 0
     CONNECTED = 1
@@ -12,36 +44,6 @@ class state(enum.Enum):
     WAITING_FOR_OTHERS = 4
     PLAYING = 5
     END_OF_GAME = 6
-
-def reset_deck():
-    deck = []
-    for card in ["rank-2", "rank-3", "rank-4", "rank-5", "rank-6", "rank-7", "rank-8", "rank-9", "rank-j", "rank-q", "rank-k", "rank-a"]:
-        for suit in ["diams", "spades", "clubs", "hearts"]:
-            deck.append(card + ' ' + suit)
-    return deck
-
-def deal(num_of_players):
-    deck = reset_deck()
-    hands = [[] for x in range(num_of_players)]
-    for i in range((num_of_players * 7)):
-        hands[i].append(random.choice(deck))
-        deck.pop(deck.index(hands[i]))
-        i = (i + 1) % num_of_players
-    return [deck, hands]
-
-def has_card(hand, card_played):
-    for card in hand:
-        if card_played in card:
-            return True
-    return False
-
-def final_all_index(cards, card_played):
-    final = []
-    for i in range(len(cards)):
-        if (card_played in cards[i]):
-            final.append(i)
-    return final
-
 app = bottle.Bottle()
 player_states = {}
 game_states = {
@@ -114,7 +116,7 @@ def play_card(p_id, card_played, p_to_ask):
     if (has_card(game_states['hands'][p_id], card_played)):
         return False
     if (has_card(game_states['hands'][p_to_ask], card_played)):
-        index_of_all = final_all_index(game_states['hands'][p_to_ask], card_played)
+        index_of_all = find_all_index(game_states['hands'][p_to_ask], card_played)
         for i in index_of_all:
             game_states['hands'][p_id].append(game_states['hands'][p_to_ask][i])
             game_states['hands'][p_to_ask].pop(game_states['hands'][p_to_ask][i])
