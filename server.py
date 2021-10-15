@@ -24,7 +24,7 @@ def has_card(hand: list, card_played: int):
     final = []
     last_find = 0
     for card in hand:
-        if (card.split(' ')[0] == card_played):
+        if (card.split(' ')[0] == card_played.split(' ')[0]):
             final.append(hand.index(card, last_find))
             last_find = hand.index(card, last_find) + 1
     return final
@@ -43,7 +43,7 @@ game_states = {
     'deck': None,
     'hands': None,
     'in_game': False,
-    'matches': None,
+    'matches': [],
     'num_of_players' : 0,
     'player': 0,
 }
@@ -90,99 +90,108 @@ def start_game():
         game_states['matches'] = []
         return True
     return False
+
 # Reads game_states['hands']
 # Writes game_states['hands', 'matches']
+# Calls has_card(hand, card_played)
 def matches(p_id, card_played):
     global game_states
-    index_in_hand = has_card(game_states['hands'][p_id], card_played)
-    if (index_in_hand == 4):
+    index_in_hand = has_card(game_states['hands'][p_id], card_played.split(' ')[0])
+    if (len(index_in_hand) == 4):
         game_states['matches'].append([p_id, card_played.split(' ')[0]])
-        for i in index_in_hand:
-            game_states['hands'][p_id].pop(i)
+        for i in range(len(index_in_hand) - 1, -1, -1):
+            game_states['hands'][p_id].pop(index_in_hand[i])
 
-# Reads game_states['player', 'hands']
-# Writes game_states['hands']
+# Reads game_states['player', 'hands', 'num_of_players']
+# Writes game_states['hands', 'num_of_players']
 # Calls go_fish() matches()
 def play_card(p_id, card_played, p_to_ask):
     global game_states
-    if (game_states['player'] != p_id):
+    if (( game_states['player'] != p_id ) or ( not game_states['in_game'] )):
         return False
 
-    index_in_hand = has_card(game_states['hands'][p_id], card_played)
-    if (len(index_in_hand) == 0):
+    if (not card_played in game_states['hands'][p_id]):
         return False
     
     index_of_all = has_card(game_states['hands'][p_to_ask], card_played)
     if (len(index_of_all) == 0):
-        go_fish(p_id) # ENDGAME LOGIC
+        go_fish(p_id)
 
-    for i in index_of_all:
-        game_states['hands'][p_id].append(game_states['hands'][p_to_ask][i])
-        game_states['hands'][p_to_ask].pop(i)
+    for i in range(len(index_of_all) - 1, -1, -1):
+        game_states['hands'][p_id].append(game_states['hands'][p_to_ask][index_of_all[i]])
+        game_states['hands'][p_to_ask].pop(index_of_all[i])
 
     matches(p_id, card_played)
+    game_states['player'] = (game_states['player'] + 1) % game_states['num_of_players']
+    
+    for hand in game_states['hands']:
+        if (len(hand) == 0):
+            game_states['in_game'] = False
+    return True
 
 async def socket_task(ws, p_id):
     global game_states
-    counter = 0
     game_states['players_ready'][p_id] = state.CONNECTED
     while True:
         message = ws.receive() # BLOCKING CALL
+
+        final = {
+            'hand':             None,
+            'other_hands':      None,
+            'matches':          None,
+            'state':            game_states['players_ready'].get(p_id),
+        }
+
         if (message != 'PING' and message != None):
             try:
                 message_json = json.loads(message)
             except:
               print("Problem converting to JSON. Message was", message)
-              continue
+              message_json = {}
+        else:
+            message_json = {}
+        
+        if ( game_states['players_ready'].get(p_id) == state.CONNECTED ):
+            if ( message_json.get('am_ready') == True ):
+                message_json.pop('am_ready')
+                game_states['players_ready'][p_id] = state.READY_TO_START_GAME
+                final['state'] = game_states['players_ready'].get(p_id)
 
-            final = {
-                'hand':             None,
-                'other_hands':      None,
-                'matches':          None,
-                'state':            game_states['players_ready'].get(p_id),
-            }
+        if ( game_states['players_ready'].get(p_id) == state.READY_TO_START_GAME ):
+            if ( message_json.get('am_ready') == False ):
+                message_json.pop('am_ready')
+                game_states['players_ready'][p_id] = state.CONNECTED
+                final['state'] = game_states['players_ready'].get(p_id)
+            start_game()
+            if ( game_states['in_game'] == True):
+                game_states['players_ready'][p_id] = state.PLAYING_GAME
+                final['state'] = game_states['players_ready'].get(p_id)
             
-            if ( game_states['players_ready'].get(p_id) == state.CONNECTED ):
-                if ( message_json.get('am_ready') == True ):
-                    message_json.pop('am_ready')
-                    game_states['players_ready'][p_id] = state.READY_TO_START_GAME
-                    final['state'] = game_states['players_ready'].get(p_id)
-
-            if ( game_states['players_ready'].get(p_id) == state.READY_TO_START_GAME ):
-                if ( message_json.get('am_ready') == False ):
-                    message_json.pop('am_ready')
-                    game_states['players_ready'][p_id] = state.CONNECTED
-                    final['state'] = game_states['players_ready'].get(p_id)
-                start_game()
-                if ( game_states['in_game'] == True):
-                    game_states['players_ready'][p_id] = state.PLAYING_GAME
-                    final['state'] = game_states['players_ready'].get(p_id)
-                
-            if ( game_states['players_ready'].get(p_id) == state.PLAYING_GAME ):
-                if (game_states['in_game'] == False):
-                    game_states['players_ready'][p_id] = state.CONNECTED
-                    final['state'] = game_states['players_ready'].get(p_id)
-                    ##### TODO ENDGAME Code here
-
-                elif (game_states['player'] == p_id):
-                    final['state'] = state.PLAYING
-                    if (message_json.get('card_played') and message_json.get('player_asked')):
-                        play_card(p_id, message_json.get('card_played'), message_json.get('player_asked'))
-                        final['state'] = state.WAITING_FOR_OTHERS
-                    
-                            
-
-                elif (game_states['player'] != p_id):
+        if ( game_states['players_ready'].get(p_id) == state.PLAYING_GAME ):
+            if (game_states['player'] == p_id):
+                final['state'] = state.PLAYING
+                if (message_json.get('card_played') and message_json.get('player_asked')):
+                    play_card(p_id, message_json.get('card_played'), message_json.get('player_asked'))
+                    message_json.pop('card_played')
+                    message_json.pop('player_asked')
                     final['state'] = state.WAITING_FOR_OTHERS
-                
-                final['hand'] = game_states[p_id]
-                final['other_hands'] = get_other_hands(p_id)
-                final['matches'] = game_states['matches']
-                        
-            if ( message_json == "INCIMENT" ):
-                counter += 1
 
-            ws.send(str(game_states['players_ready'].get(p_id)) + ' ' + str(counter))
+            elif (game_states['player'] != p_id):
+                final['state'] = state.WAITING_FOR_OTHERS
+            
+            if (game_states['in_game'] == False):
+                game_states['players_ready'][p_id] = state.CONNECTED
+                final['state'] = game_states['players_ready'].get(p_id)
+                ##### TODO ENDGAME Code here
+
+            final['hand'] = game_states[p_id]
+            final['other_hands'] = get_other_hands(p_id)
+            final['matches'] = game_states['matches']
+
+        if (len(message_json)):
+            print("UNUSED KEYS\n", message_json)
+            
+        ws.send(final)
 
 @app.route("/websocket")
 def handle_websocket():
