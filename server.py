@@ -5,9 +5,9 @@ import geventwebsocket, json, random
 
 def reset_deck():
     deck = []
-    for card in ["rank-2", "rank-3", "rank-4", "rank-5", "rank-6", "rank-7", "rank-8", "rank-9", "rank-10", "rank-j", "rank-q", "rank-k", "rank-a"]:
+    for rank in ["2", "3", "4", "5", "6", "7", "8", "9", "10", "j", "q", "k", "a"]:
         for suit in ["diams", "spades", "clubs", "hearts"]:
-            deck.append(card + ' ' + suit)
+            deck.append(rank + ' ' + suit) # it's better if i don't get the "rank-" so i changed that
     return deck
 
 def deal(num_of_players):
