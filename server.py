@@ -191,7 +191,7 @@ async def socket_task(ws, p_id):
         if (len(message_json)):
             print("UNUSED KEYS\n", message_json)
             
-        ws.send(final)
+        ws.send(json.dumps(final))
 
 @app.route("/websocket")
 def handle_websocket():
