@@ -29,14 +29,14 @@ def has_card(hand: list, card_played: int):
             last_find = hand.index(card, last_find) + 1
     return final
 
-class state(enum.Enum):
-    DISCONNECTED = 0
-    CONNECTED = 1
-    READY_TO_START_GAME = 2
-    PLAYING_GAME = 3
-    WAITING_FOR_OTHERS = 4
-    PLAYING = 5
-    END_OF_GAME = 6
+class state(int, enum.Enum):
+    DISCONNECTED        : int = 0
+    CONNECTED           : int = 1
+    READY_TO_START_GAME : int = 2
+    PLAYING_GAME        : int = 3
+    WAITING_FOR_OTHERS  : int = 4
+    PLAYING             : int = 5
+    END_OF_GAME         : int = 6
 app = bottle.Bottle()
 game_states = {
     'players_ready': {},
@@ -133,7 +133,11 @@ async def socket_task(ws, p_id):
     global game_states
     game_states['players_ready'][p_id] = state.CONNECTED
     while True:
-        message = ws.receive() # BLOCKING CALL
+        try:
+            message = ws.receive() # BLOCKING CALL
+        except:
+            print("Failed to read Web Socket")
+            return
 
         final = {
             'hand':             None,
@@ -146,8 +150,8 @@ async def socket_task(ws, p_id):
             try:
                 message_json = json.loads(message)
             except:
-              print("Problem converting to JSON. Message was", message)
-              message_json = {}
+                print("Problem converting to JSON. Message was", message)
+                message_json = {}
         else:
             message_json = {}
         
@@ -190,8 +194,12 @@ async def socket_task(ws, p_id):
 
         if (len(message_json)):
             print("UNUSED KEYS\n", message_json)
-            
-        ws.send(json.dumps(final))
+
+        try:
+            ws.send(json.dumps(final))
+        except:
+            print("ERROR")
+            print(final)
 
 @app.route("/websocket")
 def handle_websocket():
