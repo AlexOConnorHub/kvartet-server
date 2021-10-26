@@ -155,6 +155,7 @@ async def socket_task(ws, p_id):
         else:
             message_json = {}
         
+        print(f"Message {message}\n")
         if ( game_states['players_ready'].get(p_id) == state.CONNECTED ):
             if ( message_json.get('am_ready') == True ):
                 message_json.pop('am_ready')
@@ -188,7 +189,8 @@ async def socket_task(ws, p_id):
                 final['state'] = game_states['players_ready'].get(p_id)
                 ##### TODO ENDGAME Code here
 
-            final['hand'] = game_states[p_id]
+            print(f"Game States:\n{game_states}")
+            final['hand'] = game_states["hands"][p_id]
             final['other_hands'] = get_other_hands(p_id)
             final['matches'] = game_states['matches']
 
