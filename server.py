@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import gevent.pywsgi, geventwebsocket.handler
-import asyncio, bottle, enum
-import geventwebsocket, json, random
+import bottle, enum, geventwebsocket
+import json, random, threading
 
 def reset_deck():
     deck = []
@@ -209,9 +209,9 @@ def handle_websocket():
     if not wsock:
         bottle.abort(400, "Expected WebSocket request.")
     game_states['num_of_players'] += 1
-    asyncio.run(socket_task(wsock, game_states['num_of_players']-1))
+    threading.Thread(target=socket_task, args=(wsock, game_states['num_of_players']-1), daemon=True).start()
     
 if __name__ == "__main__":
     server = gevent.pywsgi.WSGIServer(
-        ("localhost", 4444), app, handler_class=geventwebsocket.handler.WebSocketHandler)
+        ("localhost", 5555), app, handler_class=geventwebsocket.handler.WebSocketHandler)
     server.serve_forever()
