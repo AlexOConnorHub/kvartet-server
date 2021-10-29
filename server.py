@@ -141,7 +141,6 @@ def play_card(p_id, card_played, p_to_ask):
 
 def socket_task(ws, p_id):
     global game_states
-    game_states['players_ready'][p_id] = state.CONNECTED
     while True:
         try:
             message = ws.receive() # BLOCKING CALL
@@ -221,7 +220,11 @@ def handle_websocket(UUID=None):
         bottle.abort(400, "Expected WebSocket request.")
     if ((game_states['num_of_players'] > 4) or (UUID == None)):
         return
-    socket_task(wsock, new_player(UUID))
+    print(UUID)
+    p_id = new_player(UUID)
+    if (game_states['players_ready'].get(p_id) == None):
+        game_states['players_ready'][p_id] = state.CONNECTED
+    socket_task(wsock, p_id)
 
 if __name__ == "__main__":
     server = gevent.pywsgi.WSGIServer(
