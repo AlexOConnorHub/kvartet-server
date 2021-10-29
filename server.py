@@ -113,7 +113,7 @@ def matches(p_id, card_played):
             game_states['hands'][p_id].pop(index_in_hand[i])
 
 # Reads game_states['player', 'hands', 'num_of_players']
-# Writes game_states['hands', 'num_of_players']
+# Writes game_states['hands', 'num_of_players', 'player']
 # Calls go_fish() matches()
 def play_card(p_id, card_played, p_to_ask):
     global game_states
@@ -186,10 +186,10 @@ def socket_task(ws, p_id):
             if (game_states['player'] == p_id):
                 final['state'] = state.PLAYING
                 if (message_json.get('card_played') and message_json.get('player_asked')):
-                    play_card(p_id, message_json.get('card_played'), message_json.get('player_asked'))
                     message_json.pop('card_played')
                     message_json.pop('player_asked')
-                    final['state'] = state.WAITING_FOR_OTHERS
+                    if (play_card(p_id, message_json.get('card_played'), message_json.get('player_asked'))):
+                        final['state'] = state.WAITING_FOR_OTHERS
 
             elif (game_states['player'] != p_id):
                 final['state'] = state.WAITING_FOR_OTHERS
