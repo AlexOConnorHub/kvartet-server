@@ -203,5 +203,31 @@ class TestPublicVariables(unittest.TestCase):
         self.assertEqual(game_states['matches'], [[0, '3']])
         self.assertFalse(game_states['in_game'])
 
+    # Reads known_players, game_states['num_of_players']
+    # Writes known_players, game_states['num_of_players']
+    def test_new_player(self):
+        global game_states
+        game_states['num_of_players'] = 0
+        self.assertEqual(0, game_states['num_of_players'])
+        self.assertEqual(0, new_player("FIRST PLAYER"))
+        self.assertEqual(1, game_states['num_of_players'])
+        self.assertEqual(0, new_player("FIRST PLAYER"))
+        self.assertEqual(1, game_states['num_of_players'])
+        self.assertEqual(1, new_player("SECCOND PLAYER"))
+        self.assertEqual(2, game_states['num_of_players'])
+        self.assertEqual(0, new_player("FIRST PLAYER"))
+        self.assertEqual(2, game_states['num_of_players'])
+        self.assertEqual(1, new_player("SECCOND PLAYER"))
+        self.assertEqual(2, game_states['num_of_players'])
+        self.assertEqual(2, new_player("THIRD PLAYER"))
+        self.assertEqual(3, game_states['num_of_players'])
+        self.assertEqual(0, new_player("FIRST PLAYER"))
+        self.assertEqual(3, game_states['num_of_players'])
+        self.assertEqual(1, new_player("SECCOND PLAYER"))
+        self.assertEqual(3, game_states['num_of_players'])
+        self.assertEqual(2, new_player("THIRD PLAYER"))
+        self.assertEqual(3, game_states['num_of_players'])
+
+
 if __name__ == '__main__':
     unittest.main()

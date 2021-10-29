@@ -47,6 +47,7 @@ game_states = {
     'num_of_players' : 0,
     'player': 0,
 }
+known_players = {}
 
 # Reads game_states['num_of_players', 'hands']
 def get_other_hands(p_id):
@@ -90,6 +91,15 @@ def start_game():
         game_states['matches'] = []
         return True
     return False
+
+# Reads known_players, game_states['num_of_players']
+# Writes known_players, game_states['num_of_players']
+def new_player(UUID):
+    global known_players, game_states
+    if (known_players.get(UUID) == None):
+        known_players[UUID] = game_states['num_of_players']
+        game_states['num_of_players'] += 1
+    return known_players.get(UUID)
 
 # Reads game_states['hands']
 # Writes game_states['hands', 'matches']
@@ -204,13 +214,14 @@ def socket_task(ws, p_id):
         finally:
             print(json.dumps(final))
 
-@app.route("/websocket")
-def handle_websocket():
+@app.route("/websocket/<UUID>")
+def handle_websocket(UUID=None):
     wsock = bottle.request.environ.get("wsgi.websocket")
     if not wsock:
         bottle.abort(400, "Expected WebSocket request.")
-    game_states['num_of_players'] += 1
-    socket_task(wsock, game_states['num_of_players'] - 1)
+    if ((game_states['num_of_players'] > 4) or (UUID == None)):
+        return
+    socket_task(wsock, new_player(UUID))
 
 if __name__ == "__main__":
     server = gevent.pywsgi.WSGIServer(
