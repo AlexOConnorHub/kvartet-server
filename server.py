@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import gevent.pywsgi, geventwebsocket.handler
 import bottle, enum, geventwebsocket
-import json, random, threading
+import json, random, multiprocessing
 
 def reset_deck():
     deck = []
@@ -129,7 +129,7 @@ def play_card(p_id, card_played, p_to_ask):
             game_states['in_game'] = False
     return True
 
-async def socket_task(ws, p_id):
+def socket_task(ws, p_id):
     global game_states
     game_states['players_ready'][p_id] = state.CONNECTED
     while True:
@@ -201,7 +201,8 @@ async def socket_task(ws, p_id):
             ws.send(json.dumps(final))
         except:
             print("ERROR")
-            print(final)
+        finally:
+            print(json.dumps(final))
 
 @app.route("/websocket")
 def handle_websocket():
@@ -209,8 +210,9 @@ def handle_websocket():
     if not wsock:
         bottle.abort(400, "Expected WebSocket request.")
     game_states['num_of_players'] += 1
-    threading.Thread(target=socket_task, args=(wsock, game_states['num_of_players']-1), daemon=True).start()
-    
+    thread = multiprocessing.Process(target=socket_task, args=(wsock, game_states['num_of_players']-1,), daemon=True)
+    thread.start()
+
 if __name__ == "__main__":
     server = gevent.pywsgi.WSGIServer(
         ("localhost", 5555), app, handler_class=geventwebsocket.handler.WebSocketHandler)
