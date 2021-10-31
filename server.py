@@ -119,7 +119,7 @@ def matches(p_id, card_played):
 # Calls go_fish() matches()
 def play_card(p_id, card_played, p_to_ask):
     global game_states
-    if (( game_states['player'] != p_id ) or ( not game_states['in_game'] )):
+    if (( game_states['player'] != p_id ) or ( not game_states['in_game'] ) or (len(has_card(game_states['hands'][p_id], card_played)) == 0)):
         return
 
     if (not (card_played in game_states['hands'][p_to_ask])): # Not in hand

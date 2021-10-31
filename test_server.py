@@ -201,9 +201,9 @@ class TestPublicVariables(unittest.TestCase):
         self.assertEqual(game_states['matches'],  [[0, '2'], [1, '3'], [2, '4']])
         game_states['player'] = 0
         play_card(0, '2 spades', 2)
+        self.assertEqual(game_states['player'], 0)
+        play_card(0, 'a diams', 1)
         self.assertEqual(game_states['player'], 1)
-        play_card(1, '2 spades', 2)
-        self.assertEqual(game_states['player'], 2)
         
 
 
