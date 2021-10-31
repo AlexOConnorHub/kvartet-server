@@ -106,6 +106,8 @@ def new_player(UUID):
 # Calls has_card(hand, card_played)
 def matches(p_id, card_played):
     global game_states
+    if (card_played == None):
+        return
     index_in_hand = has_card(game_states['hands'][p_id], card_played.split(' ')[0])
     if (len(index_in_hand) == 4):
         game_states['matches'].append([p_id, card_played.split(' ')[0]])
@@ -195,11 +197,11 @@ def socket_task(ws, p_id):
             if (game_states['in_game'] == False):
                 game_states['players_ready'][p_id] = state.CONNECTED
                 final['state'] = game_states['players_ready'].get(p_id)
-                ##### TODO ENDGAME Code here
 
             final['hand'] = game_states["hands"][p_id]
             final['other_hands'] = get_other_hands(p_id)
             final['matches'] = game_states['matches']
+            final['hand'].sort()
 
         if (len(message_json)):
             print("UNUSED KEYS\n", message_json)
@@ -208,8 +210,7 @@ def socket_task(ws, p_id):
             ws.send(json.dumps(final))
         except:
             print("ERROR")
-        # finally:
-        #     print(json.dumps(final))
+            print(json.dumps(final))
 
 @app.route("/websocket/<UUID>")
 def handle_websocket(UUID=None):

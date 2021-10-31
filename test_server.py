@@ -174,10 +174,11 @@ class TestPublicVariables(unittest.TestCase):
         game_states['num_of_players'] = 3
         game_states['in_game'] = True
         game_states['matches'] = []
+        game_states['deck'] = []
         game_states['hands'] = [
-            ['2 diams', '4 diams', '3 clubs', '2 hearts'],
-            ['3 diams', '3 spades', '2 clubs', '4 hearts'], 
-            ['2 spades', '4 spades', '4 clubs', '3 hearts'],
+            ['2 diams', '4 diams', '3 clubs', '2 hearts', 'a clubs'],
+            ['3 diams', '3 spades', '2 clubs', '4 hearts', 'a spades'], 
+            ['2 spades', '4 spades', '4 clubs', '3 hearts', 'a diams'],
         ]
         game_states['player'] = 0
         play_card(0, '2 clubs', 1)
@@ -185,19 +186,25 @@ class TestPublicVariables(unittest.TestCase):
         play_card(1, '3 clubs', 0)
         game_states['player'] = 2
         play_card(2, '4 diams', 0)
-        self.assertEqual(game_states['hands'][0], ['2 diams', '2 hearts', '2 clubs'])
-        self.assertEqual(game_states['hands'][1], ['3 diams', '3 spades', '4 hearts', '3 clubs'])
-        self.assertEqual(game_states['hands'][2], ['2 spades', '4 spades', '4 clubs', '3 hearts', '4 diams'])
+        self.assertEqual(game_states['hands'][0], ['2 diams', '2 hearts', 'a clubs', '2 clubs'])
+        self.assertEqual(game_states['hands'][1], ['3 diams', '3 spades', '4 hearts', 'a spades', '3 clubs'])
+        self.assertEqual(game_states['hands'][2], ['2 spades', '4 spades', '4 clubs', '3 hearts', 'a diams', '4 diams'])
         game_states['player'] = 0
         play_card(0, '2 spades', 2)
         game_states['player'] = 1
         play_card(1, '3 hearts', 2)
         game_states['player'] = 2
         play_card(2, '4 hearts', 1)
-        self.assertEqual(game_states['hands'][0], [])
-        self.assertEqual(game_states['hands'][1], [])
-        self.assertEqual(game_states['hands'][2], [])
-        self.assertEqual(game_states['matches'][2], [])
+        self.assertEqual(game_states['hands'][0], ['a clubs'])
+        self.assertEqual(game_states['hands'][1], ['a spades'])
+        self.assertEqual(game_states['hands'][2], ['a diams'])
+        self.assertEqual(game_states['matches'],  [[0, '2'], [1, '3'], [2, '4']])
+        game_states['player'] = 0
+        play_card(0, '2 spades', 2)
+        self.assertEqual(game_states['player'], 1)
+        play_card(1, '2 spades', 2)
+        self.assertEqual(game_states['player'], 2)
+        
 
 
     # Reads known_players, game_states['num_of_players']
