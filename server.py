@@ -64,11 +64,11 @@ def get_other_hands(p_id):
 def go_fish(p_id):
     global game_states
     if (len(game_states['deck']) == 0):
-        return False
+        return None
     new_card_i = random.randint(0, len(game_states['deck']) - 1)
     game_states['hands'][p_id].append(game_states['deck'][new_card_i])
     game_states['deck'].pop(new_card_i)
-    return True
+    return game_states['hands'][p_id][-1]
 
 # Reads game_states['num_of_players', 'players_ready']
 def ready_to_play():
@@ -117,30 +117,24 @@ def matches(p_id, card_played):
 # Calls go_fish() matches()
 def play_card(p_id, card_played, p_to_ask):
     global game_states
-    print(p_id, " asked ", p_to_ask, " for ", card_played)
-    # print("game_states:", game_states)
     if (( game_states['player'] != p_id ) or ( not game_states['in_game'] )):
-        return False
+        return
 
-    if (card_played in game_states['hands'][p_id]):
-        print("player", p_id, "asked for his own card")
-        return False
-    
-    index_of_all = has_card(game_states['hands'][p_to_ask], card_played)
-    if (len(index_of_all) == 0):
-        go_fish(p_id)
+    if (not (card_played in game_states['hands'][p_to_ask])): # Not in hand
+        new_card = go_fish(p_id)
+        if (new_card != card_played):
+            game_states['player'] = (game_states['player'] + 1) % game_states['num_of_players']
+            matches(p_id, new_card)
+        else:
+            matches(p_id, new_card)
+    else:
+        game_states['hands'][p_id].append(card_played)
+        game_states['hands'][p_to_ask].remove(card_played)
+        matches(p_id, card_played)
 
-    for i in range(len(index_of_all) - 1, -1, -1):
-        game_states['hands'][p_id].append(game_states['hands'][p_to_ask][index_of_all[i]])
-        game_states['hands'][p_to_ask].pop(index_of_all[i])
-
-    matches(p_id, card_played)
-    game_states['player'] = (game_states['player'] + 1) % game_states['num_of_players']
-    
-    for hand in game_states['hands']:
-        if (len(hand) == 0):
+    for match in game_states['matches']:
+        if (len(match) > 6):
             game_states['in_game'] = False
-    return True
 
 def socket_task(ws, p_id):
     global game_states
@@ -184,17 +178,18 @@ def socket_task(ws, p_id):
                 game_states['players_ready'][p_id] = state.PLAYING_GAME
                 final['state'] = game_states['players_ready'].get(p_id)
             
-        if (( game_states['players_ready'].get(p_id) == state.PLAYING_GAME) or (game_states['players_ready'].get(p_id) == state.PLAYING)):
+        if (( game_states['players_ready'].get(p_id) == state.PLAYING_GAME)):
+            if (len(game_states['hands'][p_id]) == 0):
+                game_states['player'] = (game_states['player'] + 1) % game_states['num_of_players']
+
             if (game_states['player'] == p_id):
                 final['state'] = state.PLAYING
                 if (message_json.get('card_played') and (message_json.get('player_asked') != None)):
-                    if (play_card(p_id, message_json.get('card_played'), message_json.get('player_asked'))):
-                        print("we were able to play a card")
-                        final['state'] = state.WAITING_FOR_OTHERS
+                    play_card(p_id, message_json.get('card_played'), message_json.get('player_asked'))
                     message_json.pop('card_played')
                     message_json.pop('player_asked')
 
-            elif (game_states['player'] != p_id):
+            if (game_states['player'] != p_id):
                 final['state'] = state.WAITING_FOR_OTHERS
             
             if (game_states['in_game'] == False):
