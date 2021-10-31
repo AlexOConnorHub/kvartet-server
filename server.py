@@ -181,9 +181,9 @@ def socket_task(ws, p_id):
                 final['state'] = game_states['players_ready'].get(p_id)
             
         if (( game_states['players_ready'].get(p_id) == state.PLAYING_GAME)):
-            if (len(game_states['hands'][p_id]) == 0):
-                game_states['player'] = (game_states['player'] + 1) % game_states['num_of_players']
 
+            if ((len(game_states['hands'][p_id]) == 0) and game_states['player'] == p_id):
+                game_states['player'] = (game_states['player'] + 1) % game_states['num_of_players']
             if (game_states['player'] == p_id):
                 final['state'] = state.PLAYING
                 if (message_json.get('card_played') and (message_json.get('player_asked') != None)):
