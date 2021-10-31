@@ -7,7 +7,7 @@ def reset_deck():
     deck = []
     for rank in ["2", "3", "4", "5", "6", "7", "8", "9", "10", "j", "q", "k", "a"]:
         for suit in ["diams", "spades", "clubs", "hearts"]:
-            deck.append(rank + ' ' + suit) # it's better if i don't get the "rank-" so i changed that
+            deck.append(rank + ' ' + suit) 
     return deck
 
 def deal(num_of_players):
@@ -117,10 +117,13 @@ def matches(p_id, card_played):
 # Calls go_fish() matches()
 def play_card(p_id, card_played, p_to_ask):
     global game_states
+    print(p_id, " asked ", p_to_ask, " for ", card_played)
+    # print("game_states:", game_states)
     if (( game_states['player'] != p_id ) or ( not game_states['in_game'] )):
         return False
 
-    if (not card_played in game_states['hands'][p_id]):
+    if (card_played in game_states['hands'][p_id]):
+        print("player", p_id, "asked for his own card")
         return False
     
     index_of_all = has_card(game_states['hands'][p_to_ask], card_played)
@@ -153,6 +156,7 @@ def socket_task(ws, p_id):
             'other_hands':      None,
             'matches':          None,
             'state':            game_states['players_ready'].get(p_id),
+            'p_id':             p_id
         }
 
         if (message != 'PING' and message != None):
@@ -164,7 +168,6 @@ def socket_task(ws, p_id):
         else:
             message_json = {}
         
-        # print(f"Message {message}\n")
         if ( game_states['players_ready'].get(p_id) == state.CONNECTED ):
             if ( message_json.get('am_ready') == True ):
                 message_json.pop('am_ready')
@@ -181,14 +184,15 @@ def socket_task(ws, p_id):
                 game_states['players_ready'][p_id] = state.PLAYING_GAME
                 final['state'] = game_states['players_ready'].get(p_id)
             
-        if ( game_states['players_ready'].get(p_id) == state.PLAYING_GAME ):
+        if (( game_states['players_ready'].get(p_id) == state.PLAYING_GAME) or (game_states['players_ready'].get(p_id) == state.PLAYING)):
             if (game_states['player'] == p_id):
                 final['state'] = state.PLAYING
-                if (message_json.get('card_played') and message_json.get('player_asked')):
+                if (message_json.get('card_played') and (message_json.get('player_asked') != None)):
+                    if (play_card(p_id, message_json.get('card_played'), message_json.get('player_asked'))):
+                        print("we were able to play a card")
+                        final['state'] = state.WAITING_FOR_OTHERS
                     message_json.pop('card_played')
                     message_json.pop('player_asked')
-                    if (play_card(p_id, message_json.get('card_played'), message_json.get('player_asked'))):
-                        final['state'] = state.WAITING_FOR_OTHERS
 
             elif (game_states['player'] != p_id):
                 final['state'] = state.WAITING_FOR_OTHERS
@@ -198,7 +202,6 @@ def socket_task(ws, p_id):
                 final['state'] = game_states['players_ready'].get(p_id)
                 ##### TODO ENDGAME Code here
 
-            # print(f"Game States:\n{game_states}")
             final['hand'] = game_states["hands"][p_id]
             final['other_hands'] = get_other_hands(p_id)
             final['matches'] = game_states['matches']
@@ -210,8 +213,8 @@ def socket_task(ws, p_id):
             ws.send(json.dumps(final))
         except:
             print("ERROR")
-        finally:
-            print(json.dumps(final))
+        # finally:
+        #     print(json.dumps(final))
 
 @app.route("/websocket/<UUID>")
 def handle_websocket(UUID=None):
