@@ -182,27 +182,67 @@ class TestPublicVariables(unittest.TestCase):
         ]
         game_states['player'] = 0
         play_card(0, '2 clubs', 1)
+        self.assertEqual(game_states['last_play'], {
+            'card_asked_for' : '2 clubs',
+            'player_asked'   : 1,
+            'player_asking'  : 0,
+            'success'        : True
+        })
         game_states['player'] = 1
         play_card(1, '3 clubs', 0)
+        self.assertEqual(game_states['last_play'], {
+            'card_asked_for' : '3 clubs',
+            'player_asked'   : 0,
+            'player_asking'  : 1,
+            'success'        : True
+        })
         game_states['player'] = 2
         play_card(2, '4 diams', 0)
+        self.assertEqual(game_states['last_play'], {
+            'card_asked_for' : '4 diams',
+            'player_asked'   : 0,
+            'player_asking'  : 2,
+            'success'        : True
+        })
         self.assertEqual(game_states['hands'][0], ['2 diams', '2 hearts', 'a clubs', '2 clubs'])
         self.assertEqual(game_states['hands'][1], ['3 diams', '3 spades', '4 hearts', 'a spades', '3 clubs'])
         self.assertEqual(game_states['hands'][2], ['2 spades', '4 spades', '4 clubs', '3 hearts', 'a diams', '4 diams'])
         game_states['player'] = 0
         play_card(0, '2 spades', 2)
+        self.assertEqual(game_states['last_play'], {
+            'card_asked_for' : '2 spades',
+            'player_asked'   : 2,
+            'player_asking'  : 0,
+            'success'        : True
+        })
         game_states['player'] = 1
         play_card(1, '3 hearts', 2)
+        self.assertEqual(game_states['last_play'], {
+            'card_asked_for' : '3 hearts',
+            'player_asked'   : 2,
+            'player_asking'  : 1,
+            'success'        : True
+        })
         game_states['player'] = 2
         play_card(2, '4 hearts', 1)
+        self.assertEqual(game_states['last_play'], {
+            'card_asked_for' : '4 hearts',
+            'player_asked'   : 1,
+            'player_asking'  : 2,
+            'success'        : True
+        })
         self.assertEqual(game_states['hands'][0], ['a clubs'])
         self.assertEqual(game_states['hands'][1], ['a spades'])
         self.assertEqual(game_states['hands'][2], ['a diams'])
         self.assertEqual(game_states['matches'],  [[0, '2'], [1, '3'], [2, '4']])
         game_states['player'] = 0
-        play_card(0, '2 spades', 2)
-        self.assertEqual(game_states['player'], 0)
-        play_card(0, 'a diams', 1)
+        play_card(0, 'a clubs', 2)
+        self.assertEqual(game_states['last_play'], {
+            'card_asked_for' : 'a clubs',
+            'player_asked'   : 2,
+            'player_asking'  : 0,
+            'success'        : False
+        })
         self.assertEqual(game_states['player'], 1)
         
 
