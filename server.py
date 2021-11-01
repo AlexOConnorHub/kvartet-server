@@ -153,6 +153,11 @@ def player_won():
             return True
     return False
 
+    for hand in game_states['hands']:
+        if (len(hand) != 0):
+            return
+    game_states['in_game'] = False
+
 def socket_task(ws, p_id):
     global game_states
     while True:
