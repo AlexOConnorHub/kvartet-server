@@ -46,6 +46,7 @@ game_states = {
     'matches': [],
     'num_of_players' : 0,
     'player': 0,
+    'last_play': {}
 }
 known_players = {}
 
@@ -116,24 +117,28 @@ def matches(p_id, card_played):
             game_states['hands'][p_id].pop(index_in_hand[i])
 
 # Reads game_states['player', 'hands', 'num_of_players']
-# Writes game_states['hands', 'num_of_players', 'player']
+# Writes game_states['hands', 'num_of_players', 'player', 'last_play']
 # Calls go_fish() matches()
 def play_card(p_id, card_played, p_to_ask):
     global game_states
     if (( game_states['player'] != p_id ) or ( not game_states['in_game'] )):
         return
-
+    game_states['last_play'] = {
+        'card_asked_for' : card_played,
+        'player_asked'   : p_to_ask,
+        'player_asking'  : p_id,
+        'success'        : False
+    }
     if (not (card_played in game_states['hands'][p_to_ask])): # Not in hand
         new_card = go_fish(p_id)
         if (new_card != card_played):
             game_states['player'] = (game_states['player'] + 1) % game_states['num_of_players']
-            matches(p_id, new_card)
-        else:
-            matches(p_id, new_card)
+        matches(p_id, new_card)
     else:
         game_states['hands'][p_id].append(card_played)
         game_states['hands'][p_to_ask].remove(card_played)
         matches(p_id, card_played)
+        game_states['last_play']['success'] = True
 
     if player_won():
         print("we have a winner!")
@@ -165,11 +170,12 @@ def socket_task(ws, p_id):
             return
 
         final = {
-            'hand':             None,
-            'other_hands':      None,
-            'matches':          None,
-            'state':            game_states['players_ready'].get(p_id),
-            'p_id':             p_id
+            'hand'        : None,
+            'other_hands' : None,
+            'matches'     : None,
+            'state'       : game_states['players_ready'].get(p_id),
+            'p_id'        : p_id,
+            'last_play'   : {}
         }
 
         if (message != 'PING' and message != None):
@@ -215,9 +221,10 @@ def socket_task(ws, p_id):
                 game_states['players_ready'][p_id] = state.CONNECTED
                 final['state'] = game_states['players_ready'].get(p_id)
 
-            final['hand'] = game_states["hands"][p_id]
             final['other_hands'] = get_other_hands(p_id)
-            final['matches'] = game_states['matches']
+            final['matches']     = game_states['matches']
+            final['last_play']   = game_states['last_play']
+            final['hand']        = game_states["hands"][p_id]
             final['hand'].sort()
 
         if (len(message_json)):
