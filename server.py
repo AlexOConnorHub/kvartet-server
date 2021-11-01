@@ -134,9 +134,24 @@ def play_card(p_id, card_played, p_to_ask):
         game_states['hands'][p_to_ask].remove(card_played)
         matches(p_id, card_played)
 
-    for match in game_states['matches']:
-        if (len(match) > 6):
-            game_states['in_game'] = False
+    if player_won():
+        print("we have a winner!")
+        game_states['in_game'] = False
+
+# Czechs if any player has won yet
+def player_won():
+    threshold = 7
+    if len(game_states["matches"]) < threshold:
+        return False
+    for player in [0, 1, 2, 3]:
+        players_matches = 0
+        for match in game_states["matches"]:
+            if (match[0] == player):
+                players_matches += 1
+        if players_matches > threshold:
+            game_states['player'] = 0
+            return True
+    return False
 
 def socket_task(ws, p_id):
     global game_states
