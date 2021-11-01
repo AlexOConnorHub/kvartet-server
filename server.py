@@ -80,7 +80,7 @@ def ready_to_play():
 
 # Calls ready_to_play()
 # Reads game_states['in_game']
-# Writes game_states['deck', 'hands', 'in_game']
+# Writes game_states['deck', 'hands', 'in_game', 'player']
 def start_game():
     global game_states
     if((ready_to_play()) and (not game_states['in_game'])):
@@ -89,6 +89,7 @@ def start_game():
         game_states['deck'] = dealt[0]
         game_states['hands'] = dealt[1]
         game_states['matches'] = []
+        game_states['player'] = 0
         return True
     return False
 
@@ -119,7 +120,7 @@ def matches(p_id, card_played):
 # Calls go_fish() matches()
 def play_card(p_id, card_played, p_to_ask):
     global game_states
-    if (( game_states['player'] != p_id ) or ( not game_states['in_game'] ) or (len(has_card(game_states['hands'][p_id], card_played)) == 0)):
+    if (( game_states['player'] != p_id ) or ( not game_states['in_game'] )):
         return
 
     if (not (card_played in game_states['hands'][p_to_ask])): # Not in hand
@@ -139,24 +140,20 @@ def play_card(p_id, card_played, p_to_ask):
         game_states['in_game'] = False
 
 # Czechs if any player has won yet
+# Reads game_states['matches', 'num_of_players']
 def player_won():
+    global game_states
     threshold = 7
-    if len(game_states["matches"]) < threshold:
-        return False
-    for player in [0, 1, 2, 3]:
+    if len(game_states["matches"]) == 13:
+        return True
+    for player in range(game_states['num_of_players']):
         players_matches = 0
         for match in game_states["matches"]:
             if (match[0] == player):
                 players_matches += 1
-        if players_matches > threshold:
-            game_states['player'] = 0
+        if players_matches >= threshold:
             return True
     return False
-
-    for hand in game_states['hands']:
-        if (len(hand) != 0):
-            return
-    game_states['in_game'] = False
 
 def socket_task(ws, p_id):
     global game_states
