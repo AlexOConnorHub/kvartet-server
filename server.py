@@ -94,11 +94,11 @@ def start_game():
         return True
     return False
 
-# Reads known_players, game_states['num_of_players']
+# Reads known_players, game_states['num_of_players', 'in_game']
 # Writes known_players, game_states['num_of_players']
 def new_player(UUID):
     global known_players, game_states
-    if (known_players.get(UUID) == None):
+    if ((known_players.get(UUID) == None) and not game_states['in_game']):
         known_players[UUID] = game_states['num_of_players']
         game_states['num_of_players'] += 1
     return known_players.get(UUID)
@@ -245,6 +245,8 @@ def handle_websocket(UUID=None):
         return
     print(UUID)
     p_id = new_player(UUID)
+    if (p_id == None):
+        return
     if (game_states['players_ready'].get(p_id) == None):
         game_states['players_ready'][p_id] = state.CONNECTED
     socket_task(wsock, p_id)
