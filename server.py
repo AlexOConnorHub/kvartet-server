@@ -178,6 +178,8 @@ def socket_task(ws, p_id):
             'last_play'   : {}
         }
 
+        print("message", message)
+
         if (message != 'PING' and message != None):
             try:
                 message_json = json.loads(message)
