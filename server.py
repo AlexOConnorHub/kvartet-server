@@ -116,6 +116,7 @@ def matches(p_id, card_played):
         for i in range(len(index_in_hand) - 1, -1, -1):
             game_states['hands'][p_id].pop(index_in_hand[i])
 
+# Reads game_states['hands']
 def valid_play(p_id, card_played):
     global game_states
     for suit in ["diams", "spades", "clubs", "hearts"]:
