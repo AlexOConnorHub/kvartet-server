@@ -116,12 +116,21 @@ def matches(p_id, card_played):
         for i in range(len(index_in_hand) - 1, -1, -1):
             game_states['hands'][p_id].pop(index_in_hand[i])
 
+def valid_play(p_id, card_played):
+    global game_states
+    for suit in ["diams", "spades", "clubs", "hearts"]:
+        if (" ".join([card_played.split(" ")[0], suit]) in game_states['hands'][p_id]):
+            return True
+    return False
+
 # Reads game_states['player', 'hands', 'num_of_players']
 # Writes game_states['hands', 'num_of_players', 'player', 'last_play']
 # Calls go_fish() matches()
 def play_card(p_id, card_played, p_to_ask):
     global game_states
     if (( game_states['player'] != p_id ) or ( not game_states['in_game'] )):
+        return
+    if (not valid_play(p_id, card_played)):
         return
     game_states['last_play'] = {
         'card_asked_for' : card_played,
